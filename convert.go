@@ -149,7 +149,6 @@ func (t *TableToStruct) saveContext(text string) bool {
 
 func (t *TableToStruct) Run() {
 	tablesColumns := t.getTablesColumns()
-	fmt.Println(len(tablesColumns))
 	tableChan := make(chan *Table, len(tablesColumns))
 	for _tablename, _column := range tablesColumns {
 		table := &Table{Name: _tablename, Columns: _column}
