@@ -118,7 +118,6 @@ func (t *TableToStruct) exportStructText(tc chan *Table) {
 				importContext += table.ImportTag + "\n"
 			}
 			t.mux.Unlock()
-		default:
 		}
 	}
 Loop:
@@ -150,13 +149,13 @@ func (t *TableToStruct) saveContext(text string) bool {
 func (t *TableToStruct) Run() {
 	tablesColumns := t.getTablesColumns()
 	tableChan := make(chan *Table, len(tablesColumns))
+	t.wg.Add(1)
+	go t.exportStructText(tableChan)
 	for _tablename, _column := range tablesColumns {
 		table := &Table{Name: _tablename, Columns: _column}
 		tableChan <- table
 	}
-	t.wg.Add(1)
 	close(tableChan)
-	go t.exportStructText(tableChan)
 	t.wg.Wait()
 	context := <-t.structContext
 	if len(context) == 0 {
