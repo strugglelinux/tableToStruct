@@ -26,7 +26,7 @@ func main() {
 | ---- | ------------------------------------ |
 | -dsn | 数据库连接配置                       |
 | -f   | 设置生成的结构体保存的文件路径       |
-| -t   | 设置需要导出的表（未设置时导出全部） |
+| -t   | 设置需要导出的表（未设置时导出全部,设置格式 table1,table2） |
 
 
 ``` go
@@ -68,3 +68,5 @@ func main() {
  t2s.Run()
 }
 ```
+
+### 可执行文件执行  `./convert.bin -dsn username:pwd@server/dbname?charset=utf8  -f dir  -t table1,table2`
