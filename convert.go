@@ -100,27 +100,21 @@ func (t *TableToStruct) getTablesColumns() map[string][]Record {
 func (t *TableToStruct) exportStructText(tc chan *Table) {
 	var structContext string
 	var importContext string
-	for {
-		select {
-		case table := <-tc:
-			if table == nil {
-				goto Loop
-			}
-			t.mux.Lock()
-			res := table.handler()
-			if !res {
-				log.Printf("数据表%s处理失败\n", table.Name)
-			}
-			if len(table.Tstruct) > 0 {
-				structContext += "\n" + table.Tstruct
-			}
-			if len(table.ImportTag) > 0 && (strings.Index(importContext, table.ImportTag) == -1) {
-				importContext += table.ImportTag + "\n"
-			}
-			t.mux.Unlock()
+	for tb := range tc {
+		table := tb
+		t.mux.Lock()
+		res := table.handler()
+		if !res {
+			log.Printf("数据表%s处理失败\n", table.Name)
 		}
+		if len(table.Tstruct) > 0 {
+			structContext += "\n" + table.Tstruct
+		}
+		if len(table.ImportTag) > 0 && (strings.Index(importContext, table.ImportTag) == -1) {
+			importContext += table.ImportTag + "\n"
+		}
+		t.mux.Unlock()
 	}
-Loop:
 	t.wg.Done()
 	t.structContext <- fmt.Sprintf("%s \n %s \n\n %s", "package mode", importContext, structContext)
 	close(t.structContext)
