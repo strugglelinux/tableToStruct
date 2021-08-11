@@ -54,18 +54,25 @@ type Table struct {
 func (t *Table) handler() bool {
 	var context string
 	tableName := t.Name
+	// // l := len(tableName)
+	// // if l > 1 {
+	// // 	tableName = strings.ToUpper(tableName[0:1]) + tableName[1:]
+	// // } else if l == 1 {
+	// // 	tableName = strings.ToUpper(tableName[0:1])
+	// // }
 	l := len(tableName)
-	if l > 1 {
-		tableName = strings.ToUpper(tableName[0:1]) + tableName[1:]
-	} else if l == 1 {
-		tableName = strings.ToUpper(tableName[0:1])
+	if l > 0 {
+		tableNameOptions := t.columns(t.Name)
+		tableName = strings.Join(tableNameOptions, "_")
 	}
+
 	context = fmt.Sprintf(" type %s struct {\n ", tableName)
 	for _, c := range t.Columns {
 		if c.TABLE_NAME != t.Name {
 			continue
 		}
-		field := t.columns(c.COLUMN_NAME)
+		list := t.columns(c.COLUMN_NAME)
+		field := strings.Join(list, "")
 		fieldType := typeForMysqlToGo[c.DATA_TYPE]
 		var comment string
 		if len(c.COLUMN_COMMENT) != 0 {
@@ -85,16 +92,19 @@ func (t *Table) handler() bool {
 }
 
 //字段名处理
-func (t *Table) columns(c string) string {
-	var text string
+func (t *Table) columns(c string) []string {
+	var textList []string
 	for _, f := range strings.Split(c, "_") {
 		switch len(f) {
 		case 0:
 		case 1:
-			text += strings.ToUpper(f[0:1])
+			//text += strings.ToUpper(f[0:1])
+			textList = append(textList, strings.ToUpper(f[0:1]))
 		default:
-			text += strings.ToUpper(f[0:1]) + f[1:]
+			//text += strings.ToUpper(f[0:1]) + f[1:]
+			textList = append(textList, strings.ToUpper(f[0:1])+f[1:])
+
 		}
 	}
-	return text
+	return textList
 }

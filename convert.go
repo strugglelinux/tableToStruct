@@ -32,6 +32,8 @@ type TableToStruct struct {
 	structContext chan string
 	mux           *sync.Mutex
 	wg            sync.WaitGroup
+	done          chan bool
+	tableChan     chan *Table
 }
 
 func NewTableToStruct() *TableToStruct {
@@ -41,6 +43,8 @@ func NewTableToStruct() *TableToStruct {
 	t2s.wg = sync.WaitGroup{}
 	t2s.mux = &sync.Mutex{}
 	t2s.structContext = make(chan string)
+	t2s.done = make(chan bool)
+	t2s.tableChan = make(chan *Table)
 	return t2s
 }
 
@@ -97,27 +101,31 @@ func (t *TableToStruct) getTablesColumns() map[string][]Record {
 }
 
 //导出操作
-func (t *TableToStruct) exportStructText(tc chan *Table) {
+func (t *TableToStruct) exportStructText() {
 	var structContext string
 	var importContext string
-	for tb := range tc {
-		table := tb
-		t.mux.Lock()
-		res := table.handler()
-		if !res {
-			log.Printf("数据表%s处理失败\n", table.Name)
+	for {
+		select {
+		case table := <-t.tableChan:
+			t.mux.Lock()
+			res := table.handler()
+			if !res {
+				log.Printf("数据表%s处理失败\n", table.Name)
+			}
+			if len(table.Tstruct) > 0 {
+				structContext += "\n" + table.Tstruct
+			}
+			if len(table.ImportTag) > 0 && (strings.Index(importContext, table.ImportTag) == -1) {
+				importContext += table.ImportTag + "\n"
+			}
+			t.mux.Unlock()
+		case <-t.done:
+			goto Fin
 		}
-		if len(table.Tstruct) > 0 {
-			structContext += "\n" + table.Tstruct
-		}
-		if len(table.ImportTag) > 0 && (strings.Index(importContext, table.ImportTag) == -1) {
-			importContext += table.ImportTag + "\n"
-		}
-		t.mux.Unlock()
 	}
+Fin:
 	t.wg.Done()
 	t.structContext <- fmt.Sprintf("%s \n %s \n\n %s", "package mode", importContext, structContext)
-	close(t.structContext)
 }
 
 //保存内容
@@ -140,16 +148,16 @@ func (t *TableToStruct) saveContext(text string) bool {
 	return true
 }
 
+//执行
 func (t *TableToStruct) Run() {
 	tablesColumns := t.getTablesColumns()
-	tableChan := make(chan *Table, len(tablesColumns))
 	t.wg.Add(1)
-	go t.exportStructText(tableChan)
+	go t.exportStructText()
 	for _tablename, _column := range tablesColumns {
 		table := &Table{Name: _tablename, Columns: _column}
-		tableChan <- table
+		t.tableChan <- table
 	}
-	close(tableChan)
+	t.done <- true
 	t.wg.Wait()
 	context := <-t.structContext
 	if len(context) == 0 {
