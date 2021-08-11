@@ -28,7 +28,6 @@ func main() {
 | -f   | 设置生成的结构体保存的文件路径       |
 | -t   | 设置需要导出的表（未设置时导出全部,设置格式 table1,table2） |
 
-
 ``` go
 package main
 
